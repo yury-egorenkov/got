@@ -1,0 +1,22 @@
+# Default blacklist.
+.DS_Store
+
+# Repo root = whitelist.
+/*
+!/*.default.properties
+!/.*ignore
+!/.*rc
+!/.git*
+!/go.mod
+!/go.sum
+!/readme.md
+!/makefile
+!/static
+!/misc
+!/docs
+/mock*.sh
+
+!/go
+/go/*mock.go
+/go/*mock_test.go
+/go/mock*.go

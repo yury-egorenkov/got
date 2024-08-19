@@ -1,0 +1,6 @@
+github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
+github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
+github.com/mitranim/cmd v0.1.2 h1:kj/k7yslFTQw447V64/NHZBd0tR1wmXpysN9Oh/pVtk=
+github.com/mitranim/cmd v0.1.2/go.mod h1:L3wDcJjmhcGOLadn3C1DXAbfXS+Z3eelIJmtLo1Gl7U=
+github.com/mitranim/gg v0.1.22 h1:SkiO2hq7OvcoK3D56gZGUnrQs2/SIk86Dr6hdDiJ7ZU=
+github.com/mitranim/gg v0.1.22/go.mod h1:x2V+nJJOpeMl/XEoHou9zlTvFxYAcGOCqOAKpVkF0Yc=
