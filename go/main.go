@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"html/template"
 	"os"
 	"path/filepath"
 	r "reflect"
+	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/joho/godotenv"
 	"github.com/mitranim/cmd"
@@ -34,6 +35,9 @@ func main() {
 	defer gg.RecWith(fatal)
 	initEnvVars()
 
+	// flags
+	// jsonFmt
+
 	cmd := commands.Get()
 	cmd()
 }
@@ -45,18 +49,51 @@ func fatal(err error) {
 
 type CmdTempl struct {
 	TemplFileName string `flag:"-t" desc:"path of a template file"`
+	Pads          []string
 }
+
+/*
+TODO
+	Doesn't work if ifs shadow.
+*/
+
+var templ *template.Template
 
 func (self CmdTempl) Run() {
 	funcs := template.FuncMap{
-		`indent`:   Indent,
-		`readFile`: ReadFile,
-		`getEnv`:   GetEnv,
+		`Indent`:         Indent,
+		`ReadFile`:       ReadFile,
+		`GetEnv`:         GetEnv,
+		`ReadFileIndent`: func(name string) string { return self.ReadFileIndent(name) },
 	}
 
 	body := gg.ReadFile[string](self.TemplFileName)
-	templ := gg.Try1(template.New(`templ`).Funcs(funcs).Parse(body))
+	pads = PadsByFuncName(body, `ReadFileIndent`)
+
+	templ = gg.Try1(template.New(`templ`).Funcs(funcs).Parse(body))
 	gg.Try(templ.Execute(os.Stdout, nil))
+}
+
+var pads []string
+
+func (self CmdTempl) ReadFileIndent(name string) (out string) {
+	body := ReadFile(name)
+	out = strings.Replace(body, gg.Newline, gg.Newline+pads[0], -1)
+	pads = pads[1:]
+	return
+}
+
+func PadsByFuncName(body string, name string) (out []string) {
+	templFuncCallRegex := regexp.MustCompile(`\n(\s*){{\s*` + name)
+	vals := templFuncCallRegex.FindAllStringSubmatch(body, -1)
+
+	for _, val := range vals {
+		if len(val) > 0 {
+			out = append(out, val[1])
+		}
+	}
+
+	return
 }
 
 func Indent(spaces int, val string) string {
@@ -64,7 +101,9 @@ func Indent(spaces int, val string) string {
 	return strings.Replace(val, gg.Newline, gg.Newline+pad, -1)
 }
 
-func ReadFile(name string) string { return gg.ReadFile[string](name) }
+func ReadFile(name string) string {
+	return gg.ReadFile[string](name)
+}
 
 func GetEnv(name string) (out string) {
 	out = os.Getenv(name)
@@ -94,7 +133,7 @@ func initEnvVars() {
 	// TODO consider making this optional.
 	parseEnvFileOpt(`.env.properties`)
 
-	parseEnvFile(`.env.default.properties`)
+	// parseEnvFile(`.env.default.properties`)
 }
 
 func parseEnvFile(path string) { gg.Try(godotenv.Load(path)) }
