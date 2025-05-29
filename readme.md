@@ -12,8 +12,23 @@ A Go template engine that combines environment variables, file inclusion, and sm
 
 ## Installation
 
+Make sure you have Go installed, then run:
+
 ```bash
-go build -o got go/main.go
+go install github.com/yury_egorenkov/got@latest
+```
+
+This will download the source and compile the executable into `$GOPATH/bin/got`. Make sure `$GOPATH/bin` is in your `$PATH` so the shell can discover the `got` command. For example, add this to your `~/.profile`:
+
+```bash
+export GOPATH="$HOME/go"
+export PATH="$GOPATH/bin:$PATH"
+```
+
+Alternatively, you can run the executable using the full path:
+
+```bash
+~/go/bin/got
 ```
 
 ## Usage
@@ -21,7 +36,7 @@ go build -o got go/main.go
 ### Basic Command
 
 ```bash
-./got run -t template.tmpl -o output.txt
+got run -t template.tmpl -o output.txt
 ```
 
 ### Options
@@ -51,7 +66,7 @@ Include file contents with automatic indentation matching the template:
 ```go
 services:
   app:
-  {{ ReadFileIndent "docker/app-service.yml" }}
+    {{ ReadFileIndent "docker/app-service.yml" }}
 ```
 
 #### `Indent`
@@ -72,10 +87,10 @@ The tool automatically loads environment variables from `.env.properties` files 
 Example:
 ```bash
 # Load from custom config
-CONF=conf/prod ./got run -t templ.tmpl
+CONF=conf/prod got run -t templ.tmpl
 
 # Load from multiple configs
-CONF=conf/base,conf/prod ./got run -t templ.tmpl
+CONF=conf/base,conf/prod got run -t templ.tmpl
 ```
 
 ### Template Example

@@ -10,13 +10,14 @@
 !/go.mod
 !/go.sum
 !/readme.md
+!/license.md
 !/makefile
 !/static
 !/misc
 !/docs
 /mock*.sh
 
-!/go
-/go/*mock.go
-/go/*mock_test.go
-/go/mock*.go
+!/*.go
+/*mock.go
+/*mock_test.go
+/mock*.go

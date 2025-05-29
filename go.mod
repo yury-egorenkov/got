@@ -1,4 +1,4 @@
-module _
+module github.com/yury_egorenkov/got
 
 go 1.20
 
