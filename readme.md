@@ -15,7 +15,7 @@ A Go template engine that combines environment variables, file inclusion, and sm
 Make sure you have Go installed, then run:
 
 ```bash
-go install github.com/yury_egorenkov/got@latest
+go install github.com/yury-egorenkov/got@latest
 ```
 
 This will download the source and compile the executable into `$GOPATH/bin/got`. Make sure `$GOPATH/bin` is in your `$PATH` so the shell can discover the `got` command. For example, add this to your `~/.profile`:
