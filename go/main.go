@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+	"text/template/parse"
 
 	"github.com/joho/godotenv"
 	"github.com/mitranim/cmd"
@@ -19,6 +20,10 @@ import (
 
 const (
 	INDENT_MUL int = 2
+)
+
+type (
+	Templ = template.Template
 )
 
 var (
@@ -44,7 +49,7 @@ func main() {
 }
 
 func fatal(err error) {
-	fmt.Println(`err:`, err)
+	fmt.Println(`Error:`, err)
 	os.Exit(1)
 }
 
@@ -54,7 +59,7 @@ type CmdTempl struct {
 	Idents         []string
 }
 
-func (self CmdTempl) Run() {
+func (self CmdTempl) Templ() *Templ {
 	funcs := template.FuncMap{
 		`GetEnv`:         GetEnv,
 		`Indent`:         Indent,
@@ -62,6 +67,10 @@ func (self CmdTempl) Run() {
 		`ReadFileIndent`: func(name string) string { return self.ReadFileIndent(name) },
 	}
 
+	return template.New(`templ`).Funcs(funcs)
+}
+
+func (self CmdTempl) Run() {
 	out := os.Stdout
 	if gg.IsNotZero(self.OutputFileName) {
 		outPathName := path.Join(gg.Cwd(), self.OutputFileName)
@@ -72,9 +81,9 @@ func (self CmdTempl) Run() {
 	}
 
 	body := gg.ReadFile[string](self.TemplFileName)
-	self.Idents = IdentsByFuncName(body, `ReadFileIndent`)
+	self.Idents = self.IdentsByTemplateAST(body, `ReadFileIndent`)
 
-	templ := gg.Try1(template.New(`templ`).Funcs(funcs).Parse(body))
+	templ := gg.Try1(self.Templ().Parse(body))
 	gg.Try(templ.Execute(out, nil))
 }
 
@@ -87,16 +96,103 @@ func (self *CmdTempl) ReadFileIndent(name string) (out string) {
 }
 
 func IdentsByFuncName(body string, name string) (out []string) {
-	funCallRegex := regexp.MustCompile(`\n(\s*){{\s*` + name)
+	// Enhanced regex to capture indentation before template blocks or direct calls
+	funCallRegex := regexp.MustCompile(`\n(\s*)(?:{{.*?}}[\s\n]*)*{{\s*` + name + `|(\s*)(?:{{.*?}}[\s\n]*)*{{\s*` + name)
 	vals := funCallRegex.FindAllStringSubmatch(body, -1)
 
 	for _, val := range vals {
-		if len(val) > 0 {
-			out = append(out, val[1])
+		if len(val) > 1 {
+			// Use first captured group if available, otherwise second
+			if val[1] != "" {
+				out = append(out, val[1])
+			} else if len(val) > 2 && val[2] != "" {
+				out = append(out, val[2])
+			}
 		}
 	}
 
 	return
+}
+
+// Parse template AST to find indentation context
+func (self CmdTempl) IdentsByTemplateAST(body string, name string) (out []string) {
+	templ := gg.Try1(self.Templ().Parse(body))
+	lines := strings.Split(body, "\n")
+	tree := templ.Tree
+	if tree != nil && tree.Root != nil {
+		walkNodes(tree.Root, lines, name, &out)
+	}
+
+	return
+}
+
+func walkNodes(node parse.Node, lines []string, funcName string, indents *[]string) {
+	if node == nil {
+		return
+	}
+
+	switch n := node.(type) {
+	case *parse.ActionNode:
+		if containsFunction(n.Pipe, funcName) {
+			// Find line number and extract indentation
+			pos := int(n.Position())
+			lineNum := findLineNumber(lines, pos)
+			if lineNum >= 0 && lineNum < len(lines) {
+				line := lines[lineNum]
+				indent := extractIndentation(line)
+				*indents = append(*indents, indent)
+			}
+		}
+	case *parse.ListNode:
+		if n != nil {
+			for _, child := range n.Nodes {
+				walkNodes(child, lines, funcName, indents)
+			}
+		}
+	case *parse.IfNode:
+		walkNodes(n.List, lines, funcName, indents)
+		walkNodes(n.ElseList, lines, funcName, indents)
+	case *parse.RangeNode:
+		walkNodes(n.List, lines, funcName, indents)
+		walkNodes(n.ElseList, lines, funcName, indents)
+	case *parse.WithNode:
+		walkNodes(n.List, lines, funcName, indents)
+		walkNodes(n.ElseList, lines, funcName, indents)
+	}
+}
+
+func containsFunction(pipe *parse.PipeNode, funcName string) bool {
+	if pipe == nil {
+		return false
+	}
+	for _, cmd := range pipe.Cmds {
+		for _, arg := range cmd.Args {
+			if ident, ok := arg.(*parse.IdentifierNode); ok && ident.Ident == funcName {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func findLineNumber(lines []string, pos int) int {
+	charCount := 0
+	for i, line := range lines {
+		charCount += len(line) + 1 // +1 for newline
+		if charCount > pos {
+			return i
+		}
+	}
+	return -1
+}
+
+func extractIndentation(line string) string {
+	for i, char := range line {
+		if char != ' ' && char != '\t' {
+			return line[:i]
+		}
+	}
+	return line
 }
 
 func Indent(spaces int, val string) string {
