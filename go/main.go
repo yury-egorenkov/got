@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	r "reflect"
 	"regexp"
@@ -48,44 +49,46 @@ func fatal(err error) {
 }
 
 type CmdTempl struct {
-	TemplFileName string `flag:"-t" desc:"path of a template file"`
-	Pads          []string
+	TemplFileName  string `flag:"-t" desc:"Path of a template file."`
+	OutputFileName string `flag:"-o" desc:"Path to output file. Stdout if unset."`
+	Idents         []string
 }
-
-/*
-TODO
-	Doesn't work if ifs shadow.
-*/
-
-var templ *template.Template
 
 func (self CmdTempl) Run() {
 	funcs := template.FuncMap{
+		`GetEnv`:         GetEnv,
 		`Indent`:         Indent,
 		`ReadFile`:       ReadFile,
-		`GetEnv`:         GetEnv,
 		`ReadFileIndent`: func(name string) string { return self.ReadFileIndent(name) },
 	}
 
-	body := gg.ReadFile[string](self.TemplFileName)
-	pads = PadsByFuncName(body, `ReadFileIndent`)
+	out := os.Stdout
+	if gg.IsNotZero(self.OutputFileName) {
+		outPathName := path.Join(gg.Cwd(), self.OutputFileName)
+		file := gg.Try1(os.OpenFile(outPathName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644))
+		defer file.Close()
 
-	templ = gg.Try1(template.New(`templ`).Funcs(funcs).Parse(body))
-	gg.Try(templ.Execute(os.Stdout, nil))
+		out = file
+	}
+
+	body := gg.ReadFile[string](self.TemplFileName)
+	self.Idents = IdentsByFuncName(body, `ReadFileIndent`)
+
+	templ := gg.Try1(template.New(`templ`).Funcs(funcs).Parse(body))
+	gg.Try(templ.Execute(out, nil))
 }
 
-var pads []string
-
-func (self CmdTempl) ReadFileIndent(name string) (out string) {
+func (self *CmdTempl) ReadFileIndent(name string) (out string) {
 	body := ReadFile(name)
-	out = strings.Replace(body, gg.Newline, gg.Newline+pads[0], -1)
-	pads = pads[1:]
+	ident := gg.Newline + self.Idents[0]
+	out = strings.Replace(body, gg.Newline, ident, -1)
+	self.Idents = self.Idents[1:]
 	return
 }
 
-func PadsByFuncName(body string, name string) (out []string) {
-	templFuncCallRegex := regexp.MustCompile(`\n(\s*){{\s*` + name)
-	vals := templFuncCallRegex.FindAllStringSubmatch(body, -1)
+func IdentsByFuncName(body string, name string) (out []string) {
+	funCallRegex := regexp.MustCompile(`\n(\s*){{\s*` + name)
+	vals := funCallRegex.FindAllStringSubmatch(body, -1)
 
 	for _, val := range vals {
 		if len(val) > 0 {
@@ -116,14 +119,14 @@ func GetEnv(name string) (out string) {
 }
 
 /*
-	Using `CONF` allows to alter the location of `.env.properties`
-	when invoking the app. May provide multiple paths, comma-separated.
+Using `CONF` allows to alter the location of `.env.properties`
+when invoking the app. May provide multiple paths, comma-separated.
 
-	Example:
+Example:
 
-		CONF=conf/one          make
-		CONF=conf/one,conf/two make
-		CONF=conf/test         make test
+	CONF=conf/one          make
+	CONF=conf/one,conf/two make
+	CONF=conf/test         make test
 */
 func initEnvVars() {
 	for _, base := range gg.Reversed(CommaSplit(os.Getenv(`CONF`))) {
@@ -146,8 +149,8 @@ func parseEnvFileOpt(path string) {
 /*
 Similar to `strings.Split` and `bytes.Split`. Differences:
 
-	- Supports all text types.
-	- Returns nil for empty input.
+  - Supports all text types.
+  - Returns nil for empty input.
 
 TODO consider moving to `gg`.
 */
