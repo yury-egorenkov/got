@@ -27,8 +27,10 @@ type (
 )
 
 var (
-	log = l.New(os.Stderr, `[got] `, 0)
-	cwd = gg.Cwd()
+	Errf = gg.Errf
+	Errv = gg.Errv
+	log  = l.New(os.Stderr, `[got] `, 0)
+	cwd  = gg.Cwd()
 )
 
 func OptDefault() Opt { return gg.FlagParseTo[Opt](nil) }
@@ -86,6 +88,10 @@ func (self Opt) LogErr(err error) {
 	}
 }
 
+func (self Opt) TemplateFileName() string {
+	return self.Args[0]
+}
+
 type Main struct {
 	Opt
 	Idents []string
@@ -97,30 +103,11 @@ func main() {
 
 	var main Main
 	main.Opt.Init(os.Args[1:])
-	main.Run()
-}
 
-func fatal(err error) {
-	log.Printf(`%+v`, err)
-	os.Exit(1)
-}
-
-func (self Main) Templ() *Templ {
-	funcs := template.FuncMap{
-		`GetEnv`:         GetEnv,
-		`Indent`:         Indent,
-		`ReadFile`:       ReadFile,
-		`ReadFileIndent`: func(name string) string { return self.ReadFileIndent(name) },
-	}
-
-	return template.New(`templ`).Funcs(funcs)
-}
-
-func (self Main) Run() {
 	var out io.Writer
 
-	if gg.IsNotZero(self.OutputFileName) {
-		outPathName := path.Join(cwd, self.OutputFileName)
+	if gg.IsNotZero(main.Opt.OutputFileName) {
+		outPathName := path.Join(cwd, main.Opt.OutputFileName)
 		file := gg.Try1(os.OpenFile(outPathName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644))
 		defer file.Close()
 		out = file
@@ -128,20 +115,35 @@ func (self Main) Run() {
 		out = os.Stdout
 	}
 
-	inpFileName := self.Opt.Args[0]
-	body := gg.ReadFile[string](inpFileName)
-	self.Idents = IdentsByFuncName(body, `ReadFileIndent`)
+	Render(main.Opt.TemplateFileName(), out)
+}
 
-	templ := gg.Try1(self.Templ().Parse(body))
+func fatal(err error) {
+	log.Printf(`%+v`, err)
+	os.Exit(1)
+}
+
+// TODO Check file include cycle dependency
+func Render(path string, out io.Writer) {
+	body := gg.ReadFile[string](ToAbsPath(path))
+
+	funcs := template.FuncMap{
+		`GetEnv`:         GetEnv,
+		`Indent`:         Indent,
+		`ReadFile`:       ReadFile,
+		`ReadFileIndent`: ReadFileIndentFunc,
+	}
+
+	body = ReadFileIndent(body).Validate().Process()
+	templ := gg.Try1(template.New(`templ`).Funcs(funcs).Parse(body))
 	gg.Try(templ.Execute(out, nil))
 }
 
-func (self *Main) ReadFileIndent(name string) (out string) {
-	body := ReadFile(name)
-	ident := gg.Newline + self.Idents[0]
-	out = strings.Replace(body, gg.Newline, ident, -1)
-	self.Idents = self.Idents[1:]
-	return
+func ReadFileIndentFunc(indent string, name string) string {
+	var buf gg.Buf
+	Render(name, &buf)
+	body := indent + buf.String()
+	return strings.Replace(body, gg.Newline, gg.Newline+indent, -1)
 }
 
 /*
@@ -151,18 +153,6 @@ TODO
   - To support conditional usage of `ReadFileIndent` use preprocessing with add
     indentation as argument.
 */
-func IdentsByFuncName(body string, name string) (out []string) {
-	funCallRegex := regexp.MustCompile(`\n(\s*){{\s*` + name)
-	vals := funCallRegex.FindAllStringSubmatch(body, -1)
-
-	for _, val := range vals {
-		if len(val) > 0 {
-			out = append(out, val[1])
-		}
-	}
-
-	return
-}
 
 func Indent(spaces int, val string) string {
 	pad := strings.Repeat(gg.Space, spaces*INDENT_MUL)
@@ -241,4 +231,40 @@ func IsErrFileNotFound(err error) bool {
 
 func TrimLines(src string) string {
 	return strings.Trim(src, "\n")
+}
+
+var (
+	ReadFileIndentValid   = regexp.MustCompile(`(?m){{\s*ReadFileIndent.*{{\s*ReadFileIndent|^\s*ReadFileIndent`)
+	ReadFileIndentPattern = regexp.MustCompile(`(?m)^(?P<indent>.*)(?P<func>{{\s*ReadFileIndent)\s*(?P<rest>.*)$`)
+)
+
+type ReadFileIndent string
+
+func (self ReadFileIndent) Invalid() bool {
+	return ReadFileIndentValid.MatchString(string(self))
+}
+
+func (self ReadFileIndent) Validate() ReadFileIndent {
+	if self.Invalid() {
+		panic(Errv(`Invalid template: Multiple "ReadFileIndent" calls found on a single line.`))
+	}
+
+	return self
+}
+
+/* Returns indentation inplaced. */
+func (self ReadFileIndent) Process() string {
+	return ReadFileIndentPattern.ReplaceAllString(string(self), "${func} `${indent}` ${rest}")
+}
+
+func ToAbsPath(path string) string {
+	if strings.HasPrefix(path, `/`) || strings.Contains(path, `:\\`) {
+		return path
+	}
+
+	if strings.HasPrefix(path, `~/`) || path == "~" {
+		return path
+	}
+
+	return filepath.Join(gg.Cwd(), path)
 }

@@ -8,7 +8,8 @@ A Go template engine that combines environment variables, file inclusion, and sm
 - **Environment Variable Support**: Read and validate environment variables in templates
 - **File Inclusion**: Include external files with automatic indentation
 - **Smart Indentation**: Automatically indent included content to match template structure
-- **Configuration Management**: Support for `.env.properties` files with flexible configuration paths
+- **Configuration Management**: Support for `.env.default.properties` and `.env.properties` files with flexible configuration paths
+- **Recursive Template Processing**: All included files are processed as templates, allowing nested use of custom functions and variables
 
 ## Installation
 
@@ -82,7 +83,8 @@ Manually indent text by specified spaces:
 The tool automatically loads environment variables from `.env.properties` files in this order:
 
 1. Files specified in `CONF` environment variable (comma-separated paths)
-2. `.env.properties` in current directory
+2. `.env.default.properties` in current directory for default values
+3. `.env.properties` in current or specified by `CONF` directory to override defaults
 
 Example:
 ```bash
