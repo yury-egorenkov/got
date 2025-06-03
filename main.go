@@ -235,7 +235,7 @@ func TrimLines(src string) string {
 
 var (
 	ReadFileIndentValid   = regexp.MustCompile(`(?m){{\s*ReadFileIndent.*{{\s*ReadFileIndent|^\s*ReadFileIndent`)
-	ReadFileIndentPattern = regexp.MustCompile(`(?m)^(?P<indent>.*)(?P<func>{{\s*ReadFileIndent)\s*(?P<rest>.*)$`)
+	ReadFileIndentPattern = regexp.MustCompile(`(?m)^(?P<indent>.*)(?P<func>{{\s*ReadFileIndent)\b\s*(?P<rest>.*)$`)
 )
 
 type ReadFileIndent string

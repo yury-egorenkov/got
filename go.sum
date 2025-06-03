@@ -1,6 +1,12 @@
+github.com/JohannesKaufmann/dom v0.2.0 h1:1bragmEb19K8lHAqgFgqCpiPCFEZMTXzOIEjuxkUfLQ=
+github.com/JohannesKaufmann/dom v0.2.0/go.mod h1:57iSUl5RKric4bUkgos4zu6Xt5LMHUnw3TF1l5CbGZo=
+github.com/JohannesKaufmann/html-to-markdown/v2 v2.3.3 h1:r3fokGFRDk/8pHmwLwJ8zsX4qiqfS1/1TZm2BH8ueY8=
+github.com/JohannesKaufmann/html-to-markdown/v2 v2.3.3/go.mod h1:HtsP+1Fchp4dVvaiIsLHAl/yqL3H1YLwqLC9kNwqQEg=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
 github.com/mitranim/cmd v0.1.2 h1:kj/k7yslFTQw447V64/NHZBd0tR1wmXpysN9Oh/pVtk=
 github.com/mitranim/cmd v0.1.2/go.mod h1:L3wDcJjmhcGOLadn3C1DXAbfXS+Z3eelIJmtLo1Gl7U=
 github.com/mitranim/gg v0.1.22 h1:SkiO2hq7OvcoK3D56gZGUnrQs2/SIk86Dr6hdDiJ7ZU=
 github.com/mitranim/gg v0.1.22/go.mod h1:x2V+nJJOpeMl/XEoHou9zlTvFxYAcGOCqOAKpVkF0Yc=
+golang.org/x/net v0.40.0 h1:79Xs7wF06Gbdcg4kdCCIQArK11Z1hr5POQ6+fIYHNuY=
+golang.org/x/net v0.40.0/go.mod h1:y0hY0exeL2Pku80/zKK7tpntoX23cqL3Oa6njdgRtds=
