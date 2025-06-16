@@ -9,7 +9,9 @@ A Go template engine that combines environment variables, file inclusion, and sm
 - **File Inclusion**: Include external files with automatic indentation
 - **Smart Indentation**: Automatically indent included content to match template structure
 - **Configuration Management**: Support for `.env.default.properties` and `.env.properties` files with flexible configuration paths
-- **Recursive Template Processing**: All included files are processed as templates, allowing nested use of custom functions and variables
+- **Recursive Template Processing**: All included files are processed as templates, allowing nested use of custom functions and variables. This means that any file you include with `ReadFile` or `ReadFileIndent` can itself use template functions like `GetEnv`, `ReadFile`, and `ReadFileIndent`, creating a powerful system for composing complex configurations
+- **Universal Template Functionality**: Every included file has access to the complete set of template functions and environment variables, enabling modular and reusable template components
+- **Smart Indentation**: When using `ReadFileIndent`, the tool automatically maintains correct indentation regardless of how deeply nested your file inclusions are
 - **Cycle Dependency Detection**: Prevents infinite loops by detecting circular dependencies between template includes. The system tracks which files have been included in the current processing chain and throws an error if a file tries to include itself or create a circular reference
 
 ## Installation
