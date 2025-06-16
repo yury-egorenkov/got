@@ -131,7 +131,7 @@ func Render(pathname string, out io.Writer, used []string) {
 		`GetEnv`:         GetEnv,
 		`Indent`:         Indent,
 		`ReadFile`:       ReadFile,
-		`ReadFileIndent`: ReadFileIndentFunc(pathname, used),
+		`ReadFileIndent`: Render_ReadFileIndent(pathname, used),
 	}
 
 	body = ReadFileIndent(body).Validate().Process()
@@ -139,18 +139,18 @@ func Render(pathname string, out io.Writer, used []string) {
 	gg.Try(templ.Execute(out, nil))
 }
 
-type IReadFileIndent func(indent string, name string) string
+type ReadFileIndentFunc func(indent string, name string) string
 
-func ReadFileIndentFunc(pathname string, used []string) IReadFileIndent {
-	return func(indent string, name string) string {
-		if gg.Has(used, name) {
-			panic(Errf(`cyclic dependency file %q reads %q`, name, pathname))
+func Render_ReadFileIndent(ancestor string, used []string) ReadFileIndentFunc {
+	return func(indent string, pathname string) string {
+		if gg.Has(used, pathname) {
+			panic(Errf(`cyclic dependency file %q reads %q`, pathname, ancestor))
 		}
 
-		used = append(used, name)
+		used = append(used, pathname)
 
 		var buf gg.Buf
-		Render(name, &buf, used)
+		Render(pathname, &buf, used)
 		body := indent + buf.String()
 		return strings.Replace(body, gg.Newline, gg.Newline+indent, -1)
 	}
