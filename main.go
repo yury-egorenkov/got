@@ -115,7 +115,7 @@ func main() {
 		out = os.Stdout
 	}
 
-	Render(main.Opt.TemplateFileName(), out)
+	Render(main.Opt.TemplateFileName(), out, nil)
 }
 
 func fatal(err error) {
@@ -124,14 +124,14 @@ func fatal(err error) {
 }
 
 // TODO Check file include cycle dependency
-func Render(path string, out io.Writer) {
-	body := gg.ReadFile[string](ToAbsPath(path))
+func Render(pathname string, out io.Writer, used []string) {
+	body := gg.ReadFile[string](ToAbsPath(pathname))
 
 	funcs := template.FuncMap{
 		`GetEnv`:         GetEnv,
 		`Indent`:         Indent,
 		`ReadFile`:       ReadFile,
-		`ReadFileIndent`: ReadFileIndentFunc,
+		`ReadFileIndent`: ReadFileIndentFunc(pathname, used),
 	}
 
 	body = ReadFileIndent(body).Validate().Process()
@@ -139,11 +139,21 @@ func Render(path string, out io.Writer) {
 	gg.Try(templ.Execute(out, nil))
 }
 
-func ReadFileIndentFunc(indent string, name string) string {
-	var buf gg.Buf
-	Render(name, &buf)
-	body := indent + buf.String()
-	return strings.Replace(body, gg.Newline, gg.Newline+indent, -1)
+type IReadFileIndent func(indent string, name string) string
+
+func ReadFileIndentFunc(pathname string, used []string) IReadFileIndent {
+	return func(indent string, name string) string {
+		if gg.Has(used, name) {
+			panic(Errf(`cyclic dependency file %q reads %q`, name, pathname))
+		}
+
+		used = append(used, name)
+
+		var buf gg.Buf
+		Render(name, &buf, used)
+		body := indent + buf.String()
+		return strings.Replace(body, gg.Newline, gg.Newline+indent, -1)
+	}
 }
 
 /*
@@ -190,8 +200,7 @@ func initEnvVars() {
 
 	// TODO consider making this optional.
 	parseEnvFileOpt(`.env.properties`)
-
-	// parseEnvFile(`.env.default.properties`)
+	parseEnvFileOpt(`.env.default.properties`)
 }
 
 func parseEnvFile(path string) { gg.Try(godotenv.Load(path)) }

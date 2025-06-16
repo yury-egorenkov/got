@@ -10,6 +10,7 @@ A Go template engine that combines environment variables, file inclusion, and sm
 - **Smart Indentation**: Automatically indent included content to match template structure
 - **Configuration Management**: Support for `.env.default.properties` and `.env.properties` files with flexible configuration paths
 - **Recursive Template Processing**: All included files are processed as templates, allowing nested use of custom functions and variables
+- **Cycle Dependency Detection**: Prevents infinite loops by detecting circular dependencies between template includes. The system tracks which files have been included in the current processing chain and throws an error if a file tries to include itself or create a circular reference
 
 ## Installation
 
@@ -108,6 +109,14 @@ services:
 logging:
 {{ Indent 2 (ReadFile "logging.conf") }}
 ```
+
+### Error Handling
+
+The tool includes built-in protection against common template issues:
+
+- **Circular Dependencies**: If template A includes template B, and template B tries to include template A (directly or through a chain), the tool will detect this and throw an error like: `cyclic dependency file "template-b.tmpl" reads "template-a.tmpl"`
+- **Missing Environment Variables**: Using `GetEnv` with undefined variables will cause the template processing to fail with a clear error message
+- **Missing Files**: Attempting to include non-existent files will result in a file not found error
 
 ## Dependencies
 
