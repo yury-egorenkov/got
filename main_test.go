@@ -17,6 +17,10 @@ func TestMain(m *testing.M) {
 
 func Test_Pathname(t *testing.T) {
 	defer gtest.Catch(t)
+
+	// Global var contains path to Current Work Directory.
+	cwd = `/Users/yury/Projects/me/got`
+
 	gtest.Eq(ToAbsPath(`./file.txt`), `/Users/yury/Projects/me/got/file.txt`)
 	gtest.Eq(ToAbsPath(`../parent/file.txt`), `/Users/yury/Projects/me/parent/file.txt`)
 	gtest.Eq(ToAbsPath(`relative/path/to/file.txt`), `/Users/yury/Projects/me/got/relative/path/to/file.txt`)

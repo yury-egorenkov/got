@@ -275,5 +275,5 @@ func ToAbsPath(path string) string {
 		return path
 	}
 
-	return filepath.Join(gg.Cwd(), path)
+	return filepath.Join(cwd, path)
 }
